@@ -11,7 +11,7 @@
 /*
   This example sends data through UART1 of the Arduino Mega to a SIM800L module
   connected to it. The data is sampled from the current system time.
-  Using AT commands, an HTTP GET command is sent with the sampled value  to the
+  Using AT commands, an HTTP GET command is sent with the sampled value to the
   ThingSpeak cloud.
 */
 
@@ -31,11 +31,24 @@ static kernel_pid_t thread2_pid;
 // static kernel_pid_t main_thread_pid;
 
 // Data sent to SIM800L module for HTTP connection _start
-uint8_t counter = 0;
+uint8_t ncmd = 0;
 char cRcv = 0;
 const char *data[] = {"AT+SAPBR=1,1\r\n","AT+HTTPINIT\r\n","AT+HTTPPARA=\"CID\",1\r\n",
                     "AT+HTTPPARA=\"URL\",\"api.thingspeak.com/update?api_key=TGGXXSHNNX87LYX7&field1=%d\"\r\n",
 "AT+HTTPACTION=0\r\n","AT+HTTPREAD\r\n","AT+HTTPTERM\r\n","AT+SAPBR=0,1\r\n"};
+
+// This enum type represents the response from the SIM800L module.
+
+typedef enum {
+  WAITING_OK,
+  READING_OK,
+  OK,
+  WAITING_ACTION,
+  READING_ACTION,
+  ACTION,
+  ERROR
+} SimResponseState;
+
 
 // Button and LED pins
 gpio_t buttonpin = ARDUINO_PIN_2;
@@ -60,58 +73,87 @@ void *thread_handler(void *arg){
   msg_t msg;
   while (1) {
     msg_receive(&msg);
-    if (counter == 3) {
+    if (ncmd == 3) {
       char data4[100];
       // Gets current system time
       time_struct = xtimer_now();
       field_value = time_struct.ticks32 % 100;
-      snprintf(data4, sizeof(data4), data[counter], field_value);
+      snprintf(data4, sizeof(data4), data[ncmd], field_value);
       printf("Data to be sent: %d\n", field_value);
       uart_write(SIM_UART, (uint8_t *)data4,strlen(data4)); //strlen((char *)data)
     }
     else {
-      uart_write(SIM_UART, (uint8_t *)data[counter],strlen(data[counter])); //strlen((char *)data)
+      uart_write(SIM_UART, (uint8_t *)data[ncmd],strlen(data[ncmd])); //strlen((char *)data)
     }
-    printf("State: %d\n", counter);
+    printf("Command: %d\n", ncmd);
   }
   return NULL;
 }
 
-void *thread2_handler(void *arg){
+void *processSimResponse(void *arg){
   (void)arg;
   msg_t msg;
-  uint8_t resp = 0;
-  // uint8_t state = 0;
+  SimResponseState status = WAITING_OK;
+  const char * okStr = "OK";
+  uint8_t okIndex = 0;
+  const char * actionStr = "+HTTPACTION";
+  //const uint8_t actionStrSize = sizeof(actionStr)/(actionStr[0]);
+  uint8_t actionIndex = 0;
+  const char * errorStr = "ERROR";
+  uint8_t errorIndex = 0;
+  // uint8_t ncmd = 0;
   // uint8_t get = 0;
   // char str[50] = {0};
   // uint32_t ind = 0;
   while (1) {
     msg_receive(&msg);
-
-    if (msg.content.value == 'O' /* capital letter 'o' */ && resp == 0) {
-      resp = 1;
-      printf("O");
-    }
-    else if (msg.content.value == 'K' /* capital letter 'K' */ && resp == 1) {
-      // printf("resp: %d", resp);
-      if (counter != 4){
-        resp = 0;
-        printf("K!\n");
-        counter = (counter + 1) % 8;
-        if (counter != 0)
-        msg_send(&msg,thread1_pid);
-      } else {
-        printf("K!\n");
-        resp = 2;
+    if (status == WAITING_OK) { // waiting for an 'OK' response from SIM800L
+      if (msg.content.value == okStr[okIndex]) {
+        // TODO: Fix the case when it reads an 'O' but never reads a 'K'.
+        // This will cause okIndex be 1 forever!
+        // TODO: Verify if the problem stated before happens to the other cases
+        okIndex = okIndex + 1;
+        if (okIndex == 2) { // 2 is the size of string 'OK'
+          printf("OK\n");
+          okIndex = 0;
+          if (ncmd != 4){
+            status = WAITING_OK;
+            ncmd = (ncmd + 1) % 8;
+            if (ncmd != 0)
+              msg_send(&msg,thread1_pid);
+          } else {
+            status = WAITING_ACTION;
+          }
+        }
+      } else if(msg.content.value == errorStr[errorIndex]) {
+        errorIndex = errorIndex + 1;
+        // TODO: This if catches an 'E' and 'R' from +HTTPREAD response
+        if (errorIndex == 5) { // 5 is the size of string 'ERROR'
+          printf("ERROR\n");
+          errorIndex = 0;
+          // TODO: Implement ERROR handler (function)
+        }
       }
-    } else if (msg.content.value == '+' && resp == 2) {
-      resp = 0;
-      printf("ACTION!\n");
-      counter = (counter + 1) % 8;
-      msg_send(&msg,thread1_pid);
-    } else if (resp != 2) {
-      resp = 0;
+    } else if (msg.content.value == actionStr[actionIndex] && status == WAITING_ACTION) {
+      actionIndex = actionIndex + 1;
       printf("%c", (char) msg.content.value);
+      if (actionIndex == 11) { // 10 is the size of string 'HTTPACTION'
+        printf(" ");
+        actionIndex = 0;
+        status = ACTION;
+      }
+    } else if (status == ACTION) {
+      if (msg.content.value != '\r') {
+        printf("%c", (char) msg.content.value);
+      }
+      else {
+        printf("\n");
+        ncmd = (ncmd + 1) % 8;
+        status = WAITING_OK;
+        msg_send(&msg,thread1_pid);
+      }
+    } else {
+    //  printf("%c", (char) msg.content.value);
     }
   }
   return NULL;
@@ -147,7 +189,7 @@ int main(void)
     printf("GPIO 13 initialized successfully!\n");
   else printf("GPIO 13: INITIALIZATION ERROR!");
   // victorrsolivera - Code_end
-  thread2_pid = thread_create(thread2_stack, THREAD2_STACKSIZE,THREAD_PRIORITY_MAIN - 1,THREAD_CREATE_SLEEPING,thread2_handler,NULL, "thread2");
+  thread2_pid = thread_create(thread2_stack, THREAD2_STACKSIZE,THREAD_PRIORITY_MAIN - 1,THREAD_CREATE_SLEEPING,processSimResponse,NULL, "thread2");
   // thread3_pid = thread_create(thread3_stack, THREAD3_STACKSIZE,THREAD_PRIORITY_MAIN - 3,THREAD_CREATE_SLEEPING,thread3_handler,NULL, "thread3");
 
 
