@@ -1,118 +1,61 @@
-                          ZZZZZZ
-                        ZZZZZZZZZZZZ
-                      ZZZZZZZZZZZZZZZZ
-                     ZZZZZZZ     ZZZZZZ
-                    ZZZZZZ        ZZZZZ
-                    ZZZZZ          ZZZZ
-                    ZZZZ           ZZZZZ
-                    ZZZZ           ZZZZ
-                    ZZZZ          ZZZZZ
-                    ZZZZ        ZZZZZZ
-                    ZZZZ     ZZZZZZZZ       777        7777       7777777777
-              ZZ    ZZZZ   ZZZZZZZZ         777      77777777    77777777777
-          ZZZZZZZ   ZZZZ  ZZZZZZZ           777     7777  7777       777
-        ZZZZZZZZZ   ZZZZ    Z               777     777    777       777
-       ZZZZZZ       ZZZZ                    777     777    777       777
-      ZZZZZ         ZZZZ                    777     777    777       777
-     ZZZZZ          ZZZZZ    ZZZZ           777     777    777       777
-     ZZZZ           ZZZZZ    ZZZZZ          777     777    777       777
-     ZZZZ           ZZZZZ     ZZZZZ         777     777    777       777
-     ZZZZ           ZZZZ       ZZZZZ        777     777    777       777
-     ZZZZZ         ZZZZZ        ZZZZZ       777     777    777       777
-      ZZZZZZ     ZZZZZZ          ZZZZZ      777     7777777777       777
-       ZZZZZZZZZZZZZZZ            ZZZZ      777      77777777        777
-         ZZZZZZZZZZZ               Z
-            ZZZZZ
+# Sistemas de Tempo Real
+## Universidade Federal de Alagoas
 
-The friendly Operating System for IoT!
-
-RIOT is a real-time multi-threading operating system that supports a range of
-devices that are typically found in the Internet of Things (IoT): 
-8-bit, 16-bit and 32-bit microcontrollers.
-
-RIOT is based on the following design principles: energy-efficiency, real-time
-capabilities, small memory footprint, modularity, and uniform API access,
-independent of the underlying hardware (this API offers partial POSIX
-compliance).
-
-RIOT is developed by an international open source community which is
-independent of specific vendors (e.g. similarly to the Linux community).
-RIOT is licensed with LGPLv2.1, a copyleft license which fosters
-indirect business models around the free open-source software platform
-provided by RIOT, e.g. it is possible to link closed-source code with the
-LGPL code.
-
-## FEATURES
-
-RIOT is based on a microkernel architecture, and provides features including,
-but not limited to:
-
-* a preemptive, tickless scheduler with priorities
-* flexible memory management
-* high resolution, long-term timers
-* support for AVR, MSP430, ARM7, and ARM Cortex-M on over 50 boards
-* the native port allows to run RIOT as-is on Linux, BSD, and MacOS. Multiple
-  instances of RIOT running on a single machine can also be interconnected via
-  a simple virtual Ethernet bridge
-* IPv6
-* 6LoWPAN (RFC4944, RFC6282, and RFC6775)
-* UDP
-* RPL (storing mode, P2P mode)
-* CoAP
-* CCN-Lite
+### Descrição do projeto
+ Este repositório é um clone do [repositório oficial do RIOT OS]() com a adição de um projeto de exemplo no qual enviam-se dados para a Cloud (ThingSpeak) através de um módulo GPRS SIM800L pela UART1  do Arduino MEGA.
 
 
-## GETTING STARTED
-* You want to start the RIOT? Just follow our [quickstart guide](http://doc.riot-os.org/index.html#the-quickest-start) or the [getting started documentation](http://doc.riot-os.org/getting-started.html).
-* The RIOT API itself can be built from the code using doxygen. The latest
-  version is uploaded daily to http://riot-os.org/api.
+### Dependências do projeto
 
-## KNOWN ISSUES
-* With latest GCC version (>= 6) platforms based on some ARM platforms will
-  raise some warnings, leading to a failing build
-  (see https://github.com/RIOT-OS/RIOT/issues/5519).
-  As a workaround, you can compile with warnings not being treated as errors:
-  `WERROR=0 make`
+Para compilar o código e gerar o executável, será necessário ter o [AVRDUDE](http://www.nongnu.org/avrdude/) instalado.
 
-### USING THE NATIVE PORT WITH NETWORKING
-If you compile RIOT for the native cpu and include the `netdev2_tap` module,
-you can specify a network interface like this: `PORT=tap0 make term`
+[Tutorial de instalação Ubuntu](http://ubuntuhandbook.org/index.php/2014/09/install-avrdude-6-1-ubuntu-1404/)
 
-#### SETTING UP A TAP NETWORK
-There is a shellscript in `RIOT/dist/tools/tapsetup` called `tapsetup` which
-you can use to create a network of tap interfaces.
+[Tutorial de instalação Windows](http://www.ladyada.net/learn/avr/setup-win.html)
 
-*USAGE*
-To create a bridge and two (or count at your option) tap interfaces:
+Para este exemplo, será necessário criar uma conta no [ThingSpeak](https://thingspeak.com/) para visualizar o dado enviado na Cloud.
 
-    ./dist/tools/tapsetup/tapsetup [-c [<count>]]
+### Hardwares Utilizados e suas conexões
 
-## CONTRIBUTE
+Para execução do projeto, será necessário:
+- Arduino MEGA2560
+- Módulo GPRS SIM800L
+- *Push Button*
+- Resistor *Pull-up* 10k
 
-To contribute something to RIOT, please refer to the [development
-procedures](https://github.com/RIOT-OS/RIOT/wiki/Development-procedures) and
-read all notes for best practice.
+O esquema de conexão dos pinos está disposta da seguinte forma:
 
-## MAILING LISTS
-* RIOT OS kernel developers list
- * devel@riot-os.org (http://lists.riot-os.org/mailman/listinfo/devel)
-* RIOT OS users list
- * users@riot-os.org (http://lists.riot-os.org/mailman/listinfo/users)
-* RIOT commits
- * commits@riot-os.org (http://lists.riot-os.org/mailman/listinfo/commits)
-* Github notifications
- * notifications@riot-os.org
-   (http://lists.riot-os.org/mailman/listinfo/notifications)
+Na imagem, o bloco do Arduino MEGA2560 está exibindo apenas os pinos utilizados na conexão. O pino D2 é o pino 2 digital do Arduino.
 
-## LICENSE
-* Most of the code developed by the RIOT community is licensed under the GNU
-  Lesser General Public License (LGPL) version 2.1 as published by the Free
-  Software Foundation.
-* Some external sources, especially files developed by SICS are published under
-  a separate license.
+![](/img/CircuitoArduino-SIM800L.png)
 
-All code files contain licensing information.
+| SIM800L       | ARDUINO MEGA2560 |
+| ------------- |:-------------:   |
+| RX | TX1   |
+| TX      | RX1         |
 
-For more information, see the RIOT website:
+Neste projeto, foi utilizada uma fonte externa para alimentação do módulo SIM800L. A tensão de alimentação pode estar entre 3.4V e 4.4V.
 
-http://www.riot-os.org
+Além disso, foi utilizado um botão e um resistor *Pull-up* para gerar a interrupção externa.
+
+#### Observações Importantes
+
+- Verifique se o GND está comum ao SIM800L e o Arduino Mega, do contrário os dados não serão enviados.
+
+- É recomendável que a fonte de alimentação externa para o SIM800L seja capaz de fornecer 2A, visto que este é o valor de pico para transmissão de dados que o módulo exige.
+
+
+### Como executar
+
+Para executar o projeto, vá para o diretório *examples/sim800-app*, e execute o seguinte comando no terminal:
+
+```s
+make BOARD=arduino-mega2560 flash
+```
+
+Ao final do processo de gravação, abra o *Serial Monitor* para o *debug* das etapas.
+
+
+O código aguarda uma interrupção externa (neste caso, a interrupção é o pressionar do botão), e quando esta ocorre, o sistema gera um valor aleatório de 0 a 99 e inicia uma série de etapas para o envio deste valor para o [ThingSpeak](https://thingspeak.com/).
+
+A sequência de comandos AT utilizados são específicos para o módulo SIM800L.
